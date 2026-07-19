@@ -27,6 +27,10 @@ cd lumina-labs
 npx serve .
 ```
 
+## Live Site
+
+🚀 **Live at: https://matheku.github.io/lumina-labs/**
+
 ## Preview
 
 ![LUMINA Labs](assets/hero-panorama.jpg)
