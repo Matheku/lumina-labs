@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUMINA Labs - Adaptive Lighting Experience</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            void: '#0a0f1a',
+            voidLight: '#151a26',
+            luminaCore: '#00d4ff',
+            ambientWarm: '#ff6b6b',
+            daylightWhite: '#f0f8ff',
+            twilightPurple: '#8b5cf6',
+            success: '#00ff88',
+            'neon-purple': '#a855f7',
+            'neon-pink': '#ec4899',
+          },
+          fontFamily: {
+            sans: ['Inter Tight', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s ease-in-out infinite',
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+              '50%': { transform: 'translateY(-20px) rotate(2deg)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- GSAP Core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/SplitText.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/CustomEase.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      background: linear-gradient(180deg, #0a0f1a 0%, #0d1320 50%, #0a0f1a 100%);
+      color: #f0f8ff;
+      overflow-x: hidden;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(0, 212, 255, 0.1);
+      z-index: 1000;
+      pointer-events: none;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00d4ff, #8b5cf6, #ff6b6b);
+      transform-origin: left;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    }
+
+    /* Glass morphism */
+    .glass-card {
+      background: rgba(21, 26, 38, 0.4);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.3s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 212, 255, 0.2);
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.1);
+    }
+
+    /* 3D Orb */
+    .orb-container {
+      perspective: 1000px;
+      perspective-origin: center center;
+    }
+    .orb {
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+    }
+    .orb-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #00d4ff, #8b5cf6, #151a26);
+      box-shadow:
+        inset 0 0 40px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(139, 92, 246, 0.4),
+        0 0 100px rgba(0, 212, 255, 0.2);
+    }
+    .orb-glow {
+      position: absolute;
+      inset: -40px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent 70%);
+      filter: blur(20px);
+      animation: pulse-slow 4s ease-in-out infinite;
+    }
+
+    /* Hero section */
+    .hero-bg {
+      background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    }
+    .text-glow {
+      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5), 0 0 60px rgba(0, 212, 255, 0.3);
+    }
+    .neon-glow {
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.4), 0 0 60px rgba(0, 212, 255, 0.2);
+    }
+
+    /* Sticky sections */
+    .sticky-trigger {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Particle field */
+    .particles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(0, 212, 255, 0.6);
+      border-radius: 50%;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    /* Parallax layers */
+    .parallax-layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Horizontal scroll */
+    .horizontal-scroll {
+      overflow-x: hidden;
+      overflow-y: hidden;
+      white-space: nowrap;
+    }
+    .horizontal-content {
+      display: inline-block;
+      white-space: nowrap;
+      padding: 0 10vw;
+    }
+    .horizontal-item {
+      display: inline-block;
+      vertical-align: top;
+      white-space: normal;
+      width: 80vw;
+      max-width: 1000px;
+      margin-right: 10vw;
+    }
+
+    /* Gradient overlays */
+    .gradient-overlay {
+      background: linear-gradient(to bottom, rgba(10, 15, 26, 0.8), transparent 40%, rgba(10, 15, 26, 0.9));
+    }
+
+    /* SVG morphing */
+    .morph-path {
+      transition: d 0.8s ease;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-container">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Navigation dots -->
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-50 glass-card px-4 py-2 rounded-full">
+    <button class="w-2.5 h-2.5 rounded-full bg-luminaCore nav-dot active transition-all" data-section="0"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="1"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="2"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="3"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="4"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="5"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="6"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="7"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="8"></button>
+    <button class="w-2.5 h-2.5 rounded-full bg-white/30 nav-dot transition-all" data-section="9"></button>
+  </div>
+
+  <!-- SECTION 0: Hero Introduction -->
+  <section id="hero-section" class="relative h-screen flex items-center justify-center overflow-hidden">
+    <div class="particles" id="hero-particles"></div>
+    <div class="absolute inset-0 bg-cover bg-center opacity-30" style="background-image: url('assets/hero-panorama.jpg');" id="hero-bg-image"></div>
+    <div class="hero-bg absolute inset-0"></div>
+
+    <div class="relative z-10 text-center px-6 max-w-5xl">
+      <div class="orb-container mb-12" id="hero-orb">
+        <div class="orb w-48 h-48 mx-auto relative" id="orb">
+          <div class="orb-face"></div>
+        </div>
+        <div class="orb-glow"></div>
+      </div>
+
+      <h1 class="text-6xl md:text-8xl font-black mb-8 text-glow opacity-0" id="hero-title">
+        LUMINA <span class="text-luminaCore">Labs</span>
+      </h1>
+      <p class="text-2xl md:text-3xl text-white/70 mb-12 max-w-3xl mx-auto opacity-0" id="hero-subtitle">
+        Adaptive lighting that learns your rhythm, enhances your wellbeing, transforms your space.
+      </p>
+      <button class="px-10 py-5 rounded-full bg-gradient-to-r from-luminaCore via-twilightPurple to-neonPurple font-bold text-lg neon-glow opacity-0 transition-transform hover:scale-105" id="hero-cta">
+        Experience the Future
+      </button>
+    </div>
+  </section>
+
+  <!-- SECTION 1: Tech Overview with Staggered Grid -->
+  <section id="tech-overview" class="h-screen flex items-center justify-center relative py-20">
+    <div class="absolute inset-0 bg-gradient-to-b from-void to-voidLight"></div>
+    <div class="relative z-10 max-w-6xl mx-auto px-6">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 opacity-0" id="tech-title">Advanced Technology</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-12">
+          <div class="w-16 h-16 rounded-full bg-luminaCore/20 flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-luminaCore" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold mb-3">Adaptive Intelligence</h3>
+          <p class="text-white/60">AI-driven environmental sensing adjusts color temperature and intensity in real-time.</p>
+        </div>
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-12">
+          <div class="w-16 h-16 rounded-full bg-twilightPurple/20 flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-twilightPurple" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-1.214"/>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold mb-3">Circadian Rhythm</h3>
+          <p class="text-white/60">Light spectrum synced to optimize sleep hormones and energy levels throughout the day.</p>
+        </div>
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-12">
+          <div class="w-16 h-16 rounded-full bg-neonPurple/20 flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-neonPurple" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h9l-3 8L21 10h-9l3-8z"/>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold mb-3">Energy Efficient</h3>
+          <p class="text-white/60">Quantum LED technology uses 70% less energy while delivering superior output.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <!-- SECTION 2: How It Works - Horizontal Scroll -->
+  <section id="how-it-works" class="horizontal-scroll h-screen flex items-center bg-void relative">
+    <div class="horizontal-content h-full flex items-center">
+      <div class="horizontal-item">
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <h2 class="text-5xl font-bold mb-12">How It Works</h2>
+            <div class="relative w-80 h-80 mx-auto" id="process-orb">
+              <div class="orb w-full h-full" id="process-orb-inner">
+                <div class="orb-face"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="horizontal-item">
+        <div class="space-y-6">
+          <h3 class="text-4xl font-bold text-luminaCore">Sense</h3>
+          <p class="text-xl text-white/70">Advanced sensors monitor light levels, occupancy, and ambient conditions 1000× per second.</p>
+          <ul class="space-y-3 text-white/60">
+            <li>• Ambient light sensors</li>
+            <li>• Motion detection</li>
+            <li>• Temperature & humidity</li>
+          </ul>
+        </div>
+      </div>
+      <div class="horizontal-item">
+        <div class="space-y-6">
+          <h3 class="text-4xl font-bold text-twilightPurple">Adapt</h3>
+          <p class="text-xl text-white/70">The system responds instantly, adjusting to provide optimal lighting for the moment.</p>
+          <ul class="space-y-3 text-white/60">
+            <li>• Real-time adjustments</li>
+            <li>• Scene presets</li>
+            <li>• Smart scheduling</li>
+          </ul>
+        </div>
+      </div>
+      <div class="horizontal-item">
+        <div class="space-y-6">
+          <h3 class="text-4xl font-bold text-neonPurple">Optimize</h3>
+          <p class="text-xl text-white/70">Over time, LUMINA learns your preferences and automatically creates the perfect atmosphere.</p>
+          <ul class="space-y-3 text-white/60">
+            <li>• Learning algorithms</li>
+            <li>• Energy optimization</li>
+            <li>• Wellness insights</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: The Science - Pinned with Layered Parallax -->
+  <section id="the-science" class="sticky-trigger bg-void">
+    <div class="parallax-layer" data-speed="0.2" id="layer-1"></div>
+    <div class="parallax-layer" data-speed="0.5" id="layer-2"></div>
+    <div class="relative z-10 h-full flex items-center justify-center px-6">
+      <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+        <div id="science-text">
+          <h2 class="text-5xl md:text-6xl font-bold mb-8 opacity-0" id="science-title">The Science of Light</h2>
+          <p class="text-xl text-white/70 mb-6 opacity-0" id="science-desc-1">Our proprietary QuantumCore™ technology uses synchronized molecular fields to attract and neutralize airborne contaminants at the atomic level.</p>
+          <p class="text-lg text-white/60 opacity-0" id="science-desc-2">The system combines biometric sensing with adaptive diffusion to create a truly responsive lighting experience.</p>
+        </div>
+        <div class="relative" id="science-orb-container">
+          <div class="orb-container w-96 h-96 mx-auto" id="science-orb">
+            <div class="orb w-full h-full" id="science-orb-inner">
+              <div class="orb-face"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: Gallery Crossfade -->
+  <section id="gallery" class="sticky-trigger bg-void">
+    <div class="relative h-full">
+      <div class="image-layer absolute inset-0 opacity-0" id="gallery-1" style="background-image: url('assets/hero-aerial.jpg');"></div>
+      <div class="image-layer absolute inset-0 opacity-0" id="gallery-2" style="background-image: url('assets/hero-street.jpg');"></div>
+      <div class="image-layer absolute inset-0 opacity-100" id="gallery-3" style="background-image: url('assets/section-data.jpg');"></div>
+      <div class="absolute inset-0 gradient-overlay"></div>
+
+      <div class="relative z-10 h-full flex items-center justify-center">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+          <h2 class="text-5xl md:text-6xl font-bold mb-8 opacity-0" id="gallery-title">Designed for Living</h2>
+          <p class="text-xl text-white/70 mb-12 opacity-0" id="gallery-desc">Void Black, Aurora White, and Nebula Silver finishes.</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="rounded-3xl overflow-hidden opacity-0 translate-y-8" id="gal-card-1">
+              <img src="assets/hero-aerial.jpg" class="w-full h-64 object-cover transition-transform hover:scale-105">
+            </div>
+            <div class="rounded-3xl overflow-hidden opacity-0 translate-y-8" id="gal-card-2">
+              <img src="assets/hero-street.jpg" class="w-full h-64 object-cover transition-transform hover:scale-105">
+            </div>
+            <div class="rounded-3xl overflow-hidden opacity-0 translate-y-8" id="gal-card-3">
+              <img src="assets/section-data.jpg" class="w-full h-64 object-cover transition-transform hover:scale-105">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: Stats with Counter Animation -->
+  <section id="stats" class="h-screen flex items-center justify-center bg-void relative">
+    <div class="particles" id="stats-particles"></div>
+    <div class="relative z-10 max-w-6xl mx-auto px-6">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 opacity-0" id="stats-title">Performance Metrics</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div class="text-center opacity-0 translate-y-8">
+          <div class="text-6xl font-black text-luminaCore mb-4 font-mono" id="stat-1">0</div>
+          <p class="text-white/60 text-lg">SQ FT Coverage</p>
+        </div>
+        <div class="text-center opacity-0 translate-y-8">
+          <div class="text-6xl font-black text-twilightPurple mb-4 font-mono" id="stat-2">0</div>
+          <p class="text-white/60 text-lg">Sensors</p>
+        </div>
+        <div class="text-center opacity-0 translate-y-8">
+          <div class="text-6xl font-black text-neonPurple mb-4 font-mono" id="stat-3">0</div>
+          <p class="text-white/60 text-lg">CFM Airflow</p>
+        </div>
+        <div class="text-center opacity-0 translate-y-8">
+          <div class="text-6xl font-black text-success mb-4 font-mono" id="stat-4">0</div>
+          <p class="text-white/60 text-lg">Hours Runtime</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: Testimonials with 3D Card Flip -->
+  <section id="testimonials" class="h-screen flex items-center justify-center bg-voidL relative">
+    <div class="relative z-10 max-w-5xl mx-auto px-6">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 opacity-0" id="testimonials-title">What Our Customers Say</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-8 cursor-pointer transform-style-3d" id="testimonial-1">
+          <div class="text-6xl text-luminaCore mb-4">"</div>
+          <p class="text-lg italic mb-4 text-white/80">Transformed my sleep quality. I wake up refreshed for the first time in years.</p>
+          <p class="text-white/60 font-mono">— Alex Chen</p>
+        </div>
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-8 cursor-pointer transform-style-3d" id="testimonial-2">
+          <div class="text-6xl text-twilightPurple mb-4">"</div>
+          <p class="text-lg italic mb-4 text-white/80">The adaptive lighting is incredible. My productivity has doubled.</p>
+          <p class="text-white/60 font-mono">— Sarah Kim</p>
+        </div>
+        <div class="glass-card p-8 rounded-3xl opacity-0 translate-y-8 cursor-pointer transform-style-3d" id="testimonial-3">
+          <div class="text-6xl text-neonPurple mb-4">"</div>
+          <p class="text-lg italic mb-4 text-white/80">Best investment for my home office. The circadian sync keeps me energized all day.</p>
+          <p class="text-white/60 font-mono">— Marcus Rivera</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: Pricing with Sticky Cards -->
+  <section id="pricing" class="h-screen flex items-center justify-center relative bg-void">
+    <div class="max-w-6xl mx-auto px-6 w-full">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 opacity-0" id="pricing-title">Pricing Plans</h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="glass-card p-10 rounded-3xl text-center opacity-0 translate-y-8 relative" id="price-1">
+          <h3 class="font-bold mb-2 text-2xl">Essential</h3>
+          <div class="text-5xl font-black text-luminaCore mb-6">$299</div>
+          <ul class="text-sm space-y-3 mb-8 text-white/60">
+            <li>• Basic adaptive lighting</li>
+            <li>• Mobile app control</li>
+            <li>• 5 room presets</li>
+          </ul>
+          <button class="px-8 py-3 rounded-full bg-luminaCore/20 font-semibold transition-all hover:bg-luminaCore/30">Learn More</button>
+        </div>
+        <div class="glass-card p-10 rounded-3xl text-center opacity-0 translate-y-8 relative transform md:scale-105" id="price-2">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-luminaCore to-twilightPurple rounded-full text-xs font-bold">POPULAR</div>
+          <h3 class="font-bold mb-2 text-2xl">Pro</h3>
+          <div class="text-5xl font-black text-twilightPurple mb-6">$499</div>
+          <ul class="text-sm space-y-3 mb-8 text-white/60">
+            <li>• Full AI features</li>
+            <li>• Circadian lighting</li>
+            <li>• Unlimited room presets</li>
+            <li>• Voice control</li>
+          </ul>
+          <button class="px-8 py-3 rounded-full bg-gradient-to-r from-luminaCore to-twilightPurple font-semibold transition-all neon-glow">Get Pro</button>
+        </div>
+        <div class="glass-card p-10 rounded-3xl text-center opacity-0 translate-y-8 relative" id="price-3">
+          <h3 class="font-bold mb-2 text-2xl">Max</h3>
+          <div class="text-5xl font-black text-neonPurple mb-6">$699</div>
+          <ul class="text-sm space-y-3 mb-8 text-white/60">
+            <li>• All Pro features</li>
+            <li>• Dual pod system</li>
+            <li>• Smart home integration</li>
+            <li>• Wellness analytics</li>
+          </ul>
+          <button class="px-8 py-3 rounded-full bg-neonPurple/20 font-semibold transition-all hover:bg-neonPurple/30">Go Max</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 8: Integration Partners -->
+  <section id="integrations" class="h-screen flex items-center justify-center bg-voidLight relative overflow-hidden">
+    <div class="particles" id="integration-particles"></div>
+    <div class="relative z-10 max-w-6xl mx-auto px-6 text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-16 opacity-0" id="integrations-title">Works With</h2>
+      <div class="grid grid-cols-3 md:grid-cols-6 gap-8">
+        <div class="opacity-0 scale-75" id="int-1">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-luminaCore/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-luminaCore">A</span>
+          </div>
+          <p class="text-white/60 text-sm">Apple Home</p>
+        </div>
+        <div class="opacity-0 scale-75" id="int-2">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-twilightPurple/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-twilightPurple">G</span>
+          </div>
+          <p class="text-white/60 text-sm">Google</p>
+        </div>
+        <div class="opacity-0 scale-75" id="int-3">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-neonPurple/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-neonPurple">AM</span>
+          </div>
+          <p class="text-white/60 text-sm">Amazon</p>
+        </div>
+        <div class="opacity-0 scale-75" id="int-4">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-success/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-success">S</span>
+          </div>
+          <p class="text-white/60 text-sm">Samsung</p>
+        </div>
+        <div class="opacity-0 scale-75" id="int-5">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-ambientWarm/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-ambientWarm">M</span>
+          </div>
+          <p class="text-white/60 text-sm">Matter</p>
+        </div>
+        <div class="opacity-0 scale-75" id="int-6">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-white/10 flex items-center justify-center mb-4">
+            <span class="text-3xl font-bold text-white">Z</span>
+          </div>
+          <p class="text-white/60 text-sm">Zigbee</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 9: Technology Deep Dive -->
+  <section id="tech-deep" class="h-screen flex items-center justify-center bg-void relative">
+    <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+      <div>
+        <h2 class="text-4xl md:text-5xl font-bold mb-6 opacity-0" id="tech-deep-title">Quantum Filtration</h2>
+        <p class="text-lg text-white/70 mb-6 opacity-0" id="tech-deep-desc-1">Proprietary QuantumCore™ technology uses synchronized molecular fields to attract and neutralize airborne contaminants at the atomic level.</p>
+        <ul class="space-y-4 text-white/60 opacity-0 mb-8" id="tech-deep-list">
+          <li class="flex items-start gap-3">
+            <span class="w-2 h-2 bg-luminaCore rounded-full mt-2"></span>
+            <span>Nano-fiber mesh captures 99.97% of particles</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="w-2 h-2 bg-twilightPurple rounded-full mt-2"></span>
+            <span>UV-C sterilization eliminates pathogens</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="w-2 h-2 bg-neonPurple rounded-full mt-2"></span>
+            <span>Active ionization neutralizes odors</span>
+          </li>
+        </ul>
+        <button class="px-8 py-4 rounded-full bg-gradient-to-r from-luminaCore to-twilightPurple font-semibold opacity-0 neon-glow" id="tech-deep-cta">Learn More</button>
+      </div>
+      <div class="relative opacity-0" id="tech-deep-orb">
+        <div class="orb-container w-80 h-80 mx-auto">
+          <div class="orb w-full h-full" id="tech-orb-inner">
+            <div class="orb-face"></div>
+          </div>
+          <div class="orb-glow"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 10: Final CTA with Particle Explosion -->
+  <section id="final-cta" class="h-screen flex items-center justify-center bg-gradient-to-t from-void via-luminaCore/5 to-void/50 relative">
+    <div class="particles" id="cta-particles"></div>
+    <div class="relative z-10 text-center max-w-3xl px-6">
+      <h2 class="text-5xl md:text-7xl font-black mb-8 opacity-0" id="cta-title">Transform Your Atmosphere</h2>
+      <p class="text-2xl text-white/70 mb-12 opacity-0" id="cta-desc">Pre-order now and receive 20% off your first LUMINA system.</p>
+      <div class="opacity-0" id="cta-button">
+        <button class="px-16 py-6 rounded-full bg-gradient-to-r from-luminaCore via-twilightPurple to-neonPurple font-bold text-xl neon-glow transition-transform hover:scale-105">
+          Reserve Your LUMINA
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="h-32 flex items-center justify-center text-white/40 bg-voidLight">
+    <div class="max-w-6xl mx-auto px-6 w-full flex justify-between items-center">
+      <p>&copy; 2026 LUMINA Labs</p>
+      <div class="flex gap-6 text-sm">
+        <a href="#" class="hover:text-luminaCore transition-colors">Privacy</a>
+        <a href="#" class="hover:text-luminaCore transition-colors">Terms</a>
+        <a href="#" class="hover:text-luminaCore transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, SplitText, CustomEase);
+
+    // Create 100 floating particles
+    function createParticles(containerId, count) {
+      const container = document.getElementById(containerId);
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animationDuration = (2 + Math.random() * 4) + 's';
+        particle.style.animationDelay = Math.random() * 2 + 's';
+        container.appendChild(particle);
+      }
+    }
+
+    createParticles('hero-particles', 50);
+    createParticles('stats-particles', 30);
+    createParticles('integration-particles', 40);
+
+    // Progress bar update
+    let scrollTicking = false;
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      if (!scrollTicking) {
+        requestAnimationFrame(() => {
+          const progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+          gsap.set(progressBar, { scaleX: progress });
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    });
+
+    // Navigation dots
+    const sections = ['hero-section', 'tech-overview', 'how-it-works', 'the-science', 'gallery', 'stats', 'testimonials', 'pricing', 'integrations', 'tech-deep', 'final-cta'];
+    document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        const el = document.getElementById(sections[i]);
+        if (el) gsap.to(window, {
+          scrollTo: el.offsetTop,
+          duration: 0.8,
+          ease: 'power3.inOut'
+        });
+      });
+    });
+
+    // Navigation highlight on scroll
+    ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => {
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+          const section = document.getElementById(sections[i]);
+          if (section && scrollY >= section.offsetTop - windowHeight/2 && scrollY < section.offsetTop + section.offsetHeight - windowHeight/2) {
+            dot.classList.add('active', 'bg-luminaCore');
+            dot.classList.remove('bg-white/30');
+          } else {
+            dot.classList.remove('active', 'bg-luminaCore');
+            dot.classList.add('bg-white/30');
+          }
+        });
+      }
+    });
+
+    // HERO: 3D Orb animation with scroll
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 1.5
+      }
+    })
+    .to('#orb', {
+      rotationY: 360,
+      rotationX: 360,
+      scale: 0.5,
+      z: 100,
+      duration: 1
+    })
+    .to('#hero-bg-image', { opacity: 0.1 }, 0);
+
+    // HERO: SplitText headline
+    const heroTitleSplit = SplitText.create('#hero-title', { type: 'chars' });
+    gsap.from(heroTitleSplit.chars, {
+      opacity: 0,
+      y: 50,
+      rotateX: -90,
+      stagger: 0.03,
+      ease: 'back.out(1.7)',
+      scrollTrigger: {
+        trigger: '#hero-section',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    });
+
+    // HERO: Content fade in
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#hero-section',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#hero-subtitle', { opacity: 1, y: 0, duration: 0.8 }, 0)
+    .to('#hero-cta', { opacity: 1, y: 0, duration: 0.6 }, 0.2);
+
+    // TECH OVERVIEW: Staggered grid reveal
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#tech-overview',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#tech-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('.glass-card.p-8', {
+      opacity: 1,
+      y: 0,
+      stagger: 0.15,
+      duration: 0.8,
+      ease: 'power3.out'
+    }, 0.3);
+
+    // HOW IT WORKS: Horizontal scroll with orb
+    const howItWorksTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '#how-it-works',
+        start: 'top top',
+        end: '+=300%',
+        scrub: 1,
+        pin: true
+      }
+    });
+
+    howItWorksTl
+      .to('#process-orb-inner', { rotationY: -180, duration: 0.5 })
+      .to('#process-orb-inner', { rotationY: -360, duration: 0.5 }, 0.3)
+      .to('.horizontal-content', { x: '-25%', duration: 0.5 }, 0)
+      .to('.horizontal-content', { x: '-50%', duration: 0.5 }, 0.5)
+      .to('.horizontal-content', { x: '-75%', duration: 0.5 }, 0.75);
+
+    // THE SCIENCE: Pinned with parallax layers
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#the-science',
+        start: 'top top',
+        end: '+=200%',
+        scrub: 1.2,
+        pin: true
+      }
+    })
+    .to('#layer-1', { y: -100, duration: 1 }, 0)
+    .to('#layer-2', { y: -200, duration: 1 }, 0)
+      .to('#science-orb-inner', {
+        rotationY: 360,
+        rotationX: 180,
+        scale: 0.8,
+        duration: 1
+      }, 0);
+
+    // THE SCIENCE: Text animation
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#the-science',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#science-title', { opacity: 1, y: 0, duration: 0.8 })
+    .to('#science-desc-1', { opacity: 1, y: 0, duration: 0.6 }, 0.2)
+    .to('#science-desc-2', { opacity: 1, y: 0, duration: 0.6 }, 0.3);
+
+    // GALLERY: Crossfade between images
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#gallery',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 0.8,
+        pin: true
+      }
+    })
+    .to('#gallery-3', { opacity: 0 }, 0)
+    .to('#gallery-2', { opacity: 1 }, 0.2)
+    .to('#gallery-2', { opacity: 0 }, 0.5)
+    .to('#gallery-1', { opacity: 1 }, 0.7);
+
+    // GALLERY: Cards stagger
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#gallery',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#gallery-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('#gallery-desc', { opacity: 1, y: 0, duration: 0.6 }, 0.1)
+    .to('#gal-card-1, #gal-card-2, #gal-card-3', {
+      opacity: 1,
+      y: 0,
+      stagger: 0.1,
+      duration: 0.8,
+      ease: 'power3.out'
+    }, 0.2);
+
+    // STATS: Counter animations
+    ScrollTrigger.create({
+      trigger: '#stats',
+      start: 'top 80%',
+      onEnter: () => {
+        const values = [1200, 12, 450, 168];
+        values.forEach((val, i) => {
+          const obj = { v: 0 };
+          gsap.to(obj, {
+            v: val,
+            duration: 2,
+            ease: 'power2.out',
+            onUpdate: () => document.getElementById(`stat-${i+1}`).textContent = Math.round(obj.v) + '+'
+          });
+        });
+        gsap.to('#stats-title', { opacity: 1, y: 0, duration: 0.8 });
+        gsap.to('#stats .text-center', {
+          opacity: 1,
+          y: 0,
+          stagger: 0.1,
+          duration: 0.8,
+          ease: 'power3.out'
+        }, 0.3);
+      }
+    });
+
+    // TESTIMONIALS: Card reveal
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#testimonials',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#testimonials-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('#testimonial-1, #testimonial-2, #testimonial-3', {
+      opacity: 1,
+      y: 0,
+      stagger: 0.15,
+      duration: 0.8,
+      ease: 'back.out(1.2)'
+    }, 0.2);
+
+    // PRICING: Cards reveal
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#pricing',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#pricing-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('#price-1, #price-2, #price-3', {
+      opacity: 1,
+      y: 0,
+      stagger: 0.1,
+      duration: 0.8,
+      ease: 'power3.out'
+    }, 0.2);
+
+    // INTEGRATIONS: Scale in
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#integrations',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#integrations-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('#int-1, #int-2, #int-3, #int-4, #int-5, #int-6', {
+      opacity: 1,
+      scale: 1,
+      stagger: 0.08,
+      duration: 0.6
+    }, 0.2);
+
+    // TECH DEEP: Content animation
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#tech-deep',
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      }
+    })
+    .to('#tech-deep-title', { opacity: 1, y: 0, duration: 0.6 })
+    .to('#tech-deep-desc-1', { opacity: 1, y: 0, duration: 0.6 }, 0.1)
+    .to('#tech-deep-list', { opacity: 1, y: 0, duration: 0.6 }, 0.2)
+    .to('#tech-deep-cta', { opacity: 1, y: 0, duration: 0.6 }, 0.3)
+    .to('#tech-deep-orb', { opacity: 1, scale: 1, rotation: 360, duration: 1 }, 0.2);
+
+    // FINAL CTA: Particle explosion on enter
+    ScrollTrigger.create({
+      trigger: '#final-cta',
+      start: 'top 80%',
+      onEnter: () => {
+        const container = document.getElementById('cta-particles');
+        for (let i = 0; i < 100; i++) {
+          const p = document.createElement('div');
+          p.className = 'particle';
+          p.style.left = '50%';
+          p.style.top = '50%';
+          p.style.background = i % 3 === 0 ? 'rgba(0, 212, 255, 0.8)' : i % 3 === 1 ? 'rgba(139, 92, 246, 0.8)' : 'rgba(236, 72, 169, 0.8)';
+          gsap.set(p, {
+            x: (Math.random() - 0.5) * 600,
+            y: (Math.random() - 0.5) * 600,
+            scale: Math.random() * 0.5 + 0.5,
+            opacity: 0
+          });
+          container.appendChild(p);
+          gsap.to(p, {
+            opacity: 1,
+            scale: 0,
+            duration: 1,
+            ease: 'power2.out'
+          });
+        }
+        gsap.to('#cta-title', { opacity: 1, y: 0, duration: 0.8 });
+        gsap.to('#cta-desc', { opacity: 1, y: 0, duration: 0.8 }, 0.1);
+        gsap.to('#cta-button', { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'back.out(1.7)' }, 0.2);
+      }
+    });
+
+    // Parallax background effects
+    gsap.utils.toArray('.parallax-layer').forEach((layer, i) => {
+      const speed = parseFloat(layer.dataset.speed) || 0.5;
+      gsap.to(layer, {
+        y: -100 * speed,
+        scrollTrigger: {
+          trigger: layer.parentElement,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true
+        }
+      });
+    });
+
+    // Reduced motion check
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // Initialize animations
+      document.addEventListener('DOMContentLoaded', () => {
+        gsap.set('.glass-card', { transformOrigin: 'center center' });
+      });
+    } else {
+      // Simple fade in for reduced motion
+      gsap.utils.toArray('h2, .glass-card').forEach(el => {
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      });
+    }
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          gsap.to(window, {
+            scrollTo: target.offsetTop,
+            duration: 1,
+            ease: 'power3.inOut'
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
